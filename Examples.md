@@ -145,8 +145,162 @@ REST API: Documentation for REST APIs is usually provided externally, and the AP
 
 GraphQL: GraphQL APIs are self-documenting due to their strongly-typed schema. The GraphQL schema serves as a contract between the client and server, providing clear information on available types, fields, and operations. Tools like GraphiQL and GraphQL Playground offer interactive documentation.
 
+Let's look at `https://rickandmortyapi.com/graphql` together. 
+
+If you want to explore with `graphiql` later 
+`brew install --cask graphiql`
+
+example query 
+```
+query character($id: ID!){
+    character(id: $id){
+        id
+        name
+        status
+        species
+        type
+        gender
+        origin{
+            id
+            name
+            type
+            dimension
+            created
+        }
+        location{
+            id
+            name
+            type
+            dimension
+            created
+        }
+        image
+        episode{
+            id
+            name
+            air_date
+            episode
+            created
+        }
+        created
+    }
+}
+```
+variables
+`{"id":ID!}`
+
 ### Versioning 
 REST API: Versioning in REST APIs is typically done by including version numbers in the URL, such as `/v1/endpoint`
 
 GraphQL: GraphQL avoids the need for versioning because clients can explicitly specify the data they need, and the schema is self-descriptive. This means that changes to the schema can be made without breaking existing clients.
 
+## Apollo Client 
+
+**Caching Example**
+Apollo Client comes with built-in caching that can help avoid redundant network requests and improve application performance. Here's how to use caching with Apollo Client:
+
+```
+import { gql, useQuery } from '@apollo/client';
+
+const GET_USERS = gql`
+  query GetUsers {
+    users {
+      id
+      name
+      email
+    }
+  }
+`;
+
+function UsersList() {
+  const { loading, error, data } = useQuery(GET_USERS);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {data.users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+```
+
+In this example, `useQuery` automatically caches the result of the `GET_USERS` query. If you navigate to another component that also fetches the same data, Apollo Client will use the cached result instead of making another network request.
+
+### State Management 
+Apollo Client can also be used for state management within your React application. You can use local state, which is stored in the Apollo cache but not sent to the server, to manage UI-related states.
+
+```
+import { gql, useQuery, useMutation } from '@apollo/client';
+
+const GET_USER_NAME = gql`
+  query GetUserName {
+    userName @client
+  }
+`;
+
+const SET_USER_NAME = gql`
+  mutation SetUserName($name: String!) {
+    setUserName(name: $name) @client
+  }
+`;
+
+function UserNameEditor() {
+  const { data } = useQuery(GET_USER_NAME);
+  const [setUserName] = useMutation(SET_USER_NAME);
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={data.userName}
+        onChange={(e) => setUserName({ variables: { name: e.target.value } })}
+      />
+    </div>
+  );
+}
+```
+
+In this example, we define local state using `@client` directive in the GraphQL schema. The `GET_USER_NAME` query fetches the local `userName` state, and the `SET_USER_NAME` mutation updates the local state.
+
+### Error Handling Example:
+Apollo Client provides error handling capabilities to handle errors returned from the GraphQL server.
+
+```
+import { gql, useQuery } from '@apollo/client';
+
+const GET_USER = gql`
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      id
+      name
+      email
+    }
+  }
+`;
+
+function UserProfile({ userId }) {
+  const { loading, error, data } = useQuery(GET_USER, {
+    variables: { id: userId },
+    onError: (error) => {
+      console.error('GraphQL Error:', error.message);
+      // You can handle errors here, e.g., show an error message to the user
+    },
+  });
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <p>Name: {data.user.name}</p>
+      <p>Email: {data.user.email}</p>
+    </div>
+  );
+}
+```
+In this example, we use the `onError` option to handle GraphQL errors. If an error occurs during the execution of the query, the `onError` function will be called with the error object, allowing you to log the error or display an error message to the user.
